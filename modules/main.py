@@ -228,6 +228,13 @@ async def account_login(bot: Client, m: Message):
                           count += 1
                           os.remove(f'{name}.pdf')
 
+                        else:
+                            await m.reply_text(f"Failed to download PDF: {response.status_code} {response.reason}")
+                    except FloodWait as e:
+                        await m.reply_text(str(e))
+                        await asyncio.sleep(2)  # Use asyncio.sleep for non-blocking sleep
+                        return  # Exit the function to avoid continuation
+
                     except Exception as e:    
                         await m.reply_text(str(e))    
                         time.sleep(e.x)    
