@@ -216,22 +216,58 @@ async def account_login(bot: Client, m: Message):
                         time.sleep(e.x)
                         continue
                 elif ".pdf" in url:
-                    try:  
+                    try:
+                    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+                    if "cwmediabkt99" in url:
+                        # Handle encrypted PDF URLs differently if needed
                         url = url.replace(" ", "%20")
                         scraper = cloudscraper.create_scraper()
                         response = scraper.get(url)
                         if response.status_code == 200:
-                          with open(f'{name}.pdf', 'wb') as file:
-                            file.write(response.content)
-                          time.sleep(2)
-                          copy = await bot.send_document(chat_id=m.chat.id, document=f'{name}.pdf', caption=cc1)
-                          count += 1
-                          os.remove(f'{name}.pdf')
-
-                    except Exception as e:    
-                        await m.reply_text(str(e))    
-                        time.sleep(e.x)    
-                        continue
+                           with open(f"{name}.pdf", 'wb') as f:
+                            f.write(response.content)
+                           time.sleep(2)
+                           message = await bot.send_document(chat_id=m.chat.id, document=f'{name}.pdf', caption=cc1)
+                           if accept_logs == 1:
+                               file_id = message.document.file_id
+                               await bot.send_document(chat_id=log_channel_id, document=file_id, caption=cc1)
+                               count += 1
+                               os.remove(f'{name}.pdf')
+                        else:
+                             await m.reply_text(f"Failed to download PDF. Status code: {response.status_code}")
+                    else:
+                        cmd = f'yt-dlp -o "{name}.pdf" -v --extractor-args "generic:impersonate=chrome" "{url}"'
+                        download_cmd = f"{cmd} -R 25 --fragment-retries 25"
+                        os.system(download_cmd)
+                        
+                        if os.path.exists(f'{name}.pdf'):
+                            new_name = f'{name}.pdf'
+                            os.rename(f'{name}.pdf', new_name)
+                            message = await bot.send_document(chat_id=m.chat.id, document=new_name, caption=cc1)
+                            if accept_logs == 1:
+                                file_id = message.document.file_id
+                                await bot.send_document(chat_id=log_channel_id, document=file_id, caption=cc1)
+                            count += 1
+                            os.remove(new_name)
+                        else:
+                            async with aiohttp.ClientSession(headers=headers) as session:
+                                async with session.get(url) as response:
+                                    if response.status == 200:
+                                        pdf_data = await response.read()
+                                        with open(f"{name}.pdf", 'wb') as f:
+                                            f.write(pdf_data)
+                                        message = await bot.send_document(chat_id=m.chat.id, document=f'{name}.pdf', caption=cc1)
+                                        if accept_logs == 1:
+                                            file_id = message.document.file_id
+                                            await bot.send_document(chat_id=log_channel_id, document=file_id, caption=cc1)
+                                        count += 1
+                                        os.remove(f'{name}.pdf')
+                                    else:
+                                        await m.reply_text(f"Failed to download PDF. Status code: {response.status}")
+                except Exception as e:
+                    await m.reply_text(f"Error: {str(e)}")
+                    time.sleep(e.x)
+                    continue
                 else:
                     prog = await m.reply_text(f"**Downloading📥:-**\n\n** Video Name :-** `{name}\n\n╰────⌈**✨❤️ ROWDY ❤️✨**⌋────╯")
                     res_file = await helper.download_video(url, cmd, name)
